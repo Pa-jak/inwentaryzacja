@@ -21,16 +21,10 @@
       margin-top: 15px;
       display: none;
     }
-    #cameraList {
-      margin: 10px;
-      padding: 8px;
-      font-size: 16px;
-    }
   </style>
 </head>
 <body>
   <h2>Skanuj kod produktu</h2>
-  <select id="cameraList"></select>
   <div id="reader"></div>
   <p id="result"></p>
   <button id="confirmBtn">Potwierdź zapis</button>
@@ -39,12 +33,10 @@
   <script>
     const sheetUrl = "https://script.google.com/macros/s/TWOJ_SKRYPT_URL/exec"; // <-- Podmień na swój URL
     let lastScannedCode = null;
-    let currentCameraId = null;
     let streamTrack = null;
     const resultEl = document.getElementById('result');
     const confirmBtn = document.getElementById('confirmBtn');
     const torchBtn = document.getElementById('torchBtn');
-    const cameraList = document.getElementById('cameraList');
     const html5QrCode = new Html5Qrcode("reader");
 
     function onScanSuccess(decodedText) {
@@ -93,7 +85,6 @@
           { fps: 10, qrbox: 250 },
           onScanSuccess
         ).then(() => {
-          // Ustaw dostęp do ścieżki strumienia video dla latarki
           navigator.mediaDevices.getUserMedia({ video: { deviceId: cameraId } })
             .then(stream => {
               streamTrack = stream.getVideoTracks()[0];
@@ -111,28 +102,13 @@
 
     Html5Qrcode.getCameras().then(devices => {
       if (devices.length > 0) {
-        devices.forEach(device => {
-          const option = document.createElement('option');
-          option.value = device.id;
-          option.text = device.label || `Camera ${cameraList.length + 1}`;
-          cameraList.appendChild(option);
-        });
-
-        currentCameraId = devices[devices.length - 1].id;
-        cameraList.value = currentCameraId;
+        const backCamera = devices.find(d => /back|rear/i.test(d.label)) || devices[devices.length - 1];
+        const currentCameraId = backCamera.id;
         startCamera(currentCameraId);
       } else {
         alert("Nie znaleziono dostępnych kamer.");
       }
     }).catch(err => console.error("Błąd dostępu do kamery:", err));
-
-    cameraList.addEventListener('change', (e) => {
-      const newCameraId = e.target.value;
-      if (newCameraId && newCameraId !== currentCameraId) {
-        currentCameraId = newCameraId;
-        startCamera(currentCameraId);
-      }
-    });
   </script>
 </body>
 </html>
