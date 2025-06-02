@@ -1,64 +1,103 @@
+Oczywiście! Poniżej masz **pełny kod HTML** zoptymalizowany pod **iPhone'a** i inne urządzenia:
+
+- 📸 **Używa tylnej kamery** (przez wybór ostatniego urządzenia),
+- ✅ Dodaje przycisk **"Potwierdź zapis"** po zeskanowaniu kodu,
+- 🌐 Gotowy do wrzucenia na GitHub Pages.
+
+---
+
+### ✅ `index.html` – wersja finalna:
+
+```html
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <title>Skaner kodów</title>
+  <title>Skaner kodów do Google Sheets</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #reader {
+      width: 100%;
+      max-width: 400px;
+      margin: auto;
+    }
+    #confirmBtn {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 15px;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h2>Skaner kodów do Google Sheets</h2>
-  <div id="reader" style="width: 300px;"></div>
+  <h2>Skanuj kod produktu</h2>
+  <div id="reader"></div>
   <p id="result"></p>
-  <button id="confirmBtn" style="display:none;">Potwierdź zapis</button>
+  <button id="confirmBtn">Potwierdź zapis</button>
 
   <script>
-    const sheetUrl = "https://script.google.com/macros/s/TWOJ_SKRYPT_URL/exec"; // <-- Podmień tutaj
+    const sheetUrl = "https://script.google.com/macros/s/TWOJ_SKRYPT_URL/exec"; // <-- Podmień na swój URL
     let lastScannedCode = null;
+    const resultEl = document.getElementById('result');
+    const confirmBtn = document.getElementById('confirmBtn');
 
     function onScanSuccess(decodedText) {
       if (decodedText !== lastScannedCode) {
         lastScannedCode = decodedText;
-        document.getElementById('result').innerText = "Zeskanowano: " + decodedText;
-        document.getElementById('confirmBtn').style.display = "inline-block";
+        resultEl.innerText = "Zeskanowano: " + decodedText;
+        confirmBtn.style.display = "inline-block";
       }
     }
 
-    document.getElementById("confirmBtn").addEventListener("click", () => {
+    confirmBtn.addEventListener("click", () => {
       if (lastScannedCode) {
         fetch(sheetUrl, {
           method: "POST",
           body: JSON.stringify({ code: lastScannedCode }),
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" }
         })
         .then(res => res.text())
         .then(msg => {
-          alert("Zapisano: " + msg);
+          alert("Zapisano do Google Sheets: " + msg);
+          resultEl.innerText = "";
+          confirmBtn.style.display = "none";
           lastScannedCode = null;
-          document.getElementById('result').innerText = "";
-          document.getElementById('confirmBtn').style.display = "none";
         })
-        .catch(err => alert("Błąd: " + err));
+        .catch(err => alert("Błąd zapisu: " + err));
       }
     });
 
     const html5QrCode = new Html5Qrcode("reader");
     Html5Qrcode.getCameras().then(devices => {
       if (devices.length > 0) {
-        const backCam = devices.find(device => /back|rear/i.test(device.label)) || devices[0];
+        const selectedCam = devices.length > 1 ? devices[devices.length - 1] : devices[0];
         html5QrCode.start(
-          backCam.id,
-          {
-            fps: 10,
-            qrbox: 250
-          },
+          selectedCam.id,
+          { fps: 10, qrbox: 250 },
           onScanSuccess
         );
       } else {
-        alert("Nie znaleziono żadnych kamer");
+        alert("Nie znaleziono dostępnych kamer.");
       }
-    }).catch(err => console.error("Błąd przy wybieraniu kamery:", err));
+    }).catch(err => console.error("Błąd dostępu do kamery:", err));
   </script>
 </body>
 </html>
+```
+
+---
+
+### 🔁 Co musisz zrobić:
+
+- Zamień `TWOJ_SKRYPT_URL` na swój link do Google Apps Script (np. `https://script.google.com/macros/s/AKfyc.../exec`).
+- Zapisz ten kod jako `index.html`.
+- Wrzuć do repozytorium i upewnij się, że GitHub Pages działa z gałęzi `main` i katalogu `/`.
+
+---
+
+Jeśli chcesz, mogę wygenerować `.zip` z tym plikiem – wystarczy dać znać.
