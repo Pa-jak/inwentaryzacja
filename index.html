@@ -57,18 +57,24 @@
       });
     }
 
-    function toggleFlashlight() {
-      const videoTrack = html5QrCode.getRunningTrack();
-      if (!videoTrack) return alert("Brak działającego strumienia wideo");
+   function toggleFlashlight() {
+  const videoTrack = html5QrCode.getRunningTrack();
+  if (!videoTrack) {
+    alert("Brak działającego strumienia wideo.");
+    return;
+  }
 
-      const capabilities = videoTrack.getCapabilities();
-      if (!capabilities.torch) return alert("Latarka nieobsługiwana");
+  const capabilities = videoTrack.getCapabilities();
+  if (!capabilities || !capabilities.torch) {
+    alert("Latarka nie jest obsługiwana przez tę przeglądarkę lub urządzenie.");
+    return;
+  }
 
-      torchOn = !torchOn;
-      videoTrack.applyConstraints({
-        advanced: [{ torch: torchOn }]
-      }).catch(e => alert("Błąd latarki: " + e));
-    }
+  torchOn = !torchOn;
+  videoTrack.applyConstraints({
+    advanced: [{ torch: torchOn }]
+  }).catch(e => alert("Błąd latarki: " + e));
+}
 
     // Start przy załadowaniu strony
     window.addEventListener('load', startScanner);
