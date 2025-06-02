@@ -1,14 +1,3 @@
-Oczywiście! Poniżej masz **pełny kod HTML** zoptymalizowany pod **iPhone'a** i inne urządzenia:
-
-- 📸 **Używa tylnej kamery** (przez wybór ostatniego urządzenia),
-- ✅ Dodaje przycisk **"Potwierdź zapis"** po zeskanowaniu kodu,
-- 🌐 Gotowy do wrzucenia na GitHub Pages.
-
----
-
-### ✅ `index.html` – wersja finalna:
-
-```html
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -32,10 +21,16 @@ Oczywiście! Poniżej masz **pełny kod HTML** zoptymalizowany pod **iPhone'a** 
       margin-top: 15px;
       display: none;
     }
+    #cameraList {
+      margin: 10px;
+      padding: 8px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
   <h2>Skanuj kod produktu</h2>
+  <select id="cameraList"></select>
   <div id="reader"></div>
   <p id="result"></p>
   <button id="confirmBtn">Potwierdź zapis</button>
@@ -43,8 +38,11 @@ Oczywiście! Poniżej masz **pełny kod HTML** zoptymalizowany pod **iPhone'a** 
   <script>
     const sheetUrl = "https://script.google.com/macros/s/TWOJ_SKRYPT_URL/exec"; // <-- Podmień na swój URL
     let lastScannedCode = null;
+    let currentCameraId = null;
     const resultEl = document.getElementById('result');
     const confirmBtn = document.getElementById('confirmBtn');
+    const cameraList = document.getElementById('cameraList');
+    const html5QrCode = new Html5Qrcode("reader");
 
     function onScanSuccess(decodedText) {
       if (decodedText !== lastScannedCode) {
@@ -72,32 +70,40 @@ Oczywiście! Poniżej masz **pełny kod HTML** zoptymalizowany pod **iPhone'a** 
       }
     });
 
-    const html5QrCode = new Html5Qrcode("reader");
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices.length > 0) {
-        const selectedCam = devices.length > 1 ? devices[devices.length - 1] : devices[0];
+    function startCamera(cameraId) {
+      html5QrCode.stop().catch(() => {}).finally(() => {
         html5QrCode.start(
-          selectedCam.id,
+          cameraId,
           { fps: 10, qrbox: 250 },
           onScanSuccess
         );
+      });
+    }
+
+    Html5Qrcode.getCameras().then(devices => {
+      if (devices.length > 0) {
+        devices.forEach(device => {
+          const option = document.createElement('option');
+          option.value = device.id;
+          option.text = device.label || `Camera ${cameraList.length + 1}`;
+          cameraList.appendChild(option);
+        });
+
+        currentCameraId = devices[devices.length - 1].id;
+        cameraList.value = currentCameraId;
+        startCamera(currentCameraId);
       } else {
         alert("Nie znaleziono dostępnych kamer.");
       }
     }).catch(err => console.error("Błąd dostępu do kamery:", err));
+
+    cameraList.addEventListener('change', (e) => {
+      const newCameraId = e.target.value;
+      if (newCameraId && newCameraId !== currentCameraId) {
+        currentCameraId = newCameraId;
+        startCamera(currentCameraId);
+      }
+    });
   </script>
 </body>
 </html>
-```
-
----
-
-### 🔁 Co musisz zrobić:
-
-- Zamień `TWOJ_SKRYPT_URL` na swój link do Google Apps Script (np. `https://script.google.com/macros/s/AKfyc.../exec`).
-- Zapisz ten kod jako `index.html`.
-- Wrzuć do repozytorium i upewnij się, że GitHub Pages działa z gałęzi `main` i katalogu `/`.
-
----
-
-Jeśli chcesz, mogę wygenerować `.zip` z tym plikiem – wystarczy dać znać.
