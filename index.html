@@ -1,115 +1,77 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8">
-  <title>Skaner kodów do Google Sheets</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Skaner Produktów</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    #reader {
-      width: 100%;
-      max-width: 400px;
-      margin: auto;
-      min-height: 300px;
-    }
-    #confirmBtn, #torchBtn {
-      padding: 10px 20px;
-      font-size: 16px;
-      margin-top: 15px;
-      display: none;
-    }
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #reader { width: 300px; margin: auto; }
+    #result { margin-top: 20px; font-weight: bold; }
+    button { margin: 10px; padding: 10px; }
   </style>
 </head>
 <body>
-  <h2>Skanuj kod produktu1</h2>
+  <h1>Skaner Produktów</h1>
   <div id="reader"></div>
-  <p id="result"></p>
-  <button id="confirmBtn">Potwierdź zapis</button>
-  <button id="torchBtn">Włącz latarkę</button>
+  <div id="result">Oczekiwanie na skan...</div>
+  <button onclick="toggleFlashlight()">Włącz/Wyłącz latarkę</button>
 
   <script>
-    const sheetUrl = "https://script.google.com/macros/s/TWOJ_SKRYPT_URL/exec"; // <-- Podmień na swój URL
-    let lastScannedCode = null;
-    let streamTrack = null;
-    const resultEl = document.getElementById('result');
-    const confirmBtn = document.getElementById('confirmBtn');
-    const torchBtn = document.getElementById('torchBtn');
-    const html5QrCode = new Html5Qrcode("reader");
+    let html5QrCode;
+    let cameraId;
+    let torchOn = false;
 
-    function onScanSuccess(decodedText) {
-      if (decodedText !== lastScannedCode) {
-        lastScannedCode = decodedText;
-        resultEl.innerText = "Zeskanowano: " + decodedText;
-        confirmBtn.style.display = "inline-block";
-      }
-    }
+    function startScanner() {
+      Html5Qrcode.getCameras().then(devices => {
+        // Wybierz tylną kamerę
+        cameraId = devices.find(d => d.label.toLowerCase().includes('back'))?.id || devices[0].id;
 
-    confirmBtn.addEventListener("click", () => {
-      if (lastScannedCode) {
-        fetch(sheetUrl, {
-          method: "POST",
-          body: JSON.stringify({ code: lastScannedCode }),
-          headers: { "Content-Type": "application/json" }
-        })
-        .then(res => res.text())
-        .then(msg => {
-          alert("Zapisano do Google Sheets: " + msg);
-          resultEl.innerText = "";
-          confirmBtn.style.display = "none";
-          lastScannedCode = null;
-        })
-        .catch(err => alert("Błąd zapisu: " + err));
-      }
-    });
-
-    torchBtn.addEventListener("click", () => {
-      if (streamTrack && streamTrack.getCapabilities().torch) {
-        const torchOn = torchBtn.textContent.includes("Włącz");
-        streamTrack.applyConstraints({ advanced: [{ torch: torchOn }] })
-          .then(() => {
-            torchBtn.textContent = torchOn ? "Wyłącz latarkę" : "Włącz latarkę";
-          })
-          .catch(err => alert("Błąd latarki: " + err));
-      } else {
-        alert("Latarka nie jest obsługiwana na tym urządzeniu.");
-      }
-    });
-
-    function startCamera(cameraId) {
-      html5QrCode.clear().then(() => {
+        html5QrCode = new Html5Qrcode("reader");
         html5QrCode.start(
-          { deviceId: { exact: cameraId } },
-          { fps: 10, qrbox: 250, facingMode: "environment" },
-          onScanSuccess
-        ).then(() => {
-          navigator.mediaDevices.getUserMedia({ video: { deviceId: cameraId } })
-            .then(stream => {
-              streamTrack = stream.getVideoTracks()[0];
-              if (streamTrack.getCapabilities().torch !== undefined) {
-                torchBtn.style.display = "inline-block";
-              } else {
-                torchBtn.style.display = "none";
-              }
-            }).catch(() => {
-              torchBtn.style.display = "none";
-            });
-        });
-      }).catch(err => console.error("Błąd czyszczenia czytnika:", err));
+          cameraId,
+          {
+            fps: 10,
+            qrbox: 250,
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true
+            },
+            videoConstraints: {
+              facingMode: "environment",
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            }
+          },
+          qrCodeMessage => {
+            document.getElementById("result").innerText = "Zeskanowano: " + qrCodeMessage;
+            // Można tu też zatrzymać skanowanie, jeśli chcesz tylko jedno skanowanie
+            // html5QrCode.stop();
+          },
+          errorMessage => {
+            // Błędy skanowania – nie pokazujemy
+          }
+        );
+      }).catch(err => {
+        document.getElementById("result").innerText = "Błąd kamery: " + err;
+      });
     }
 
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices.length > 0) {
-        const backCamera = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length - 1];
-        const currentCameraId = backCamera.id;
-        startCamera(currentCameraId);
-      } else {
-        alert("Nie znaleziono dostępnych kamer.");
-      }
-    }).catch(err => console.error("Błąd dostępu do kamery:", err));
+    function toggleFlashlight() {
+      const videoTrack = html5QrCode.getRunningTrack();
+      if (!videoTrack) return alert("Brak działającego strumienia wideo");
+
+      const capabilities = videoTrack.getCapabilities();
+      if (!capabilities.torch) return alert("Latarka nieobsługiwana");
+
+      torchOn = !torchOn;
+      videoTrack.applyConstraints({
+        advanced: [{ torch: torchOn }]
+      }).catch(e => alert("Błąd latarki: " + e));
+    }
+
+    // Start przy załadowaniu strony
+    window.addEventListener('load', startScanner);
   </script>
 </body>
 </html>
